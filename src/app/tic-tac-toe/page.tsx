@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, Timestamp, updateDoc } from "firebase/firestore";
-import { TowerControl as GameController } from 'lucide-react';
+import { TowerControl as GameController, Loader2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { db } from "../../lib/firebase";
@@ -14,9 +14,12 @@ export default function Page() {
   const router = useRouter();
   const [playerId, setPlayerId] = useState<string>('');
   const [joinGameId, setJoinGameId] = useState<string>('');
+  const [isLoading, setLoading] = useState(false);
 
   const createGame = async () => {
     if (!playerId) return;
+
+    setLoading(true);
 
     const roomsRef = collection(db, "games", "tic-tac-toe", "rooms");
     const roomRef = await addDoc(roomsRef, {
@@ -48,6 +51,8 @@ export default function Page() {
   const joinGame = async () => {
     if (!playerId || !joinGameId) return;
 
+    setLoading(true);
+
     const roomRef = doc(db, "games", "tic-tac-toe", "rooms", joinGameId);
     const docSnap = await getDoc(roomRef);
     if (docSnap.exists()) {
@@ -57,6 +62,7 @@ export default function Page() {
         alert('Game is full');
         if (data.players.O === playerId || data.players.X === playerId) {
           alert('Use another name');
+          setLoading(false);
           return;
         }
         router.push(`tic-tac-toe/${joinGameId}?playerId=${playerId}`);
@@ -66,6 +72,7 @@ export default function Page() {
       if (data.players.O) {
         if (data.players.O === playerId) {
           alert('Use another name');
+          setLoading(false);
           return;
         }
         await updateDoc(roomRef, {
@@ -78,6 +85,7 @@ export default function Page() {
       if (data.players.X) {
         if (data.players.X === playerId) {
           alert('Use another name');
+          setLoading(false);
           return;
         }
         await updateDoc(roomRef, {
@@ -87,6 +95,7 @@ export default function Page() {
         return;
       }
     } else {
+      setLoading(false);
       alert('Game not found');
     }
   };
@@ -125,19 +134,21 @@ export default function Page() {
           {joinGameId ? (
             <Button
               onClick={joinGame}
-              disabled={!playerId || !joinGameId}
+              disabled={!playerId || !joinGameId || isLoading}
               className="w-full"
               size="lg"
             >
+              {isLoading && <Loader2 className="animate-spin" />}
               Join Game
             </Button>
           ) : (
             <Button
               onClick={createGame}
-              disabled={!playerId}
+              disabled={!playerId || isLoading}
               className="w-full"
               size="lg"
             >
+              {isLoading && <Loader2 className="animate-spin" />}
               Create New Game
             </Button>
           )}
